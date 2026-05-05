@@ -9,7 +9,10 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Website will be available at [http://localhost:8080](http://localhost:8080).
+In production, Caddy publishes ports 80/443, obtains Let's Encrypt certificates,
+and proxies traffic to the internal website container. For local Docker-only
+testing, open [http://localhost](http://localhost) or run `npm run start` outside
+compose to use port 8080 directly.
 
 ## Local dev without Docker
 
@@ -47,3 +50,4 @@ Required env vars:
 - Successful payments are synced to the control plane balance endpoint.
 - In `NODE_ENV=production`, `BASE_URL` must be HTTPS.
 - IP filtering for YooKassa webhook sources is enabled by default in production (`YOOKASSA_ENFORCE_IP_FILTER=true`).
+- `vpn-go.ru` and `www.vpn-go.ru` are served by Caddy from `Caddyfile`; `www` redirects to the apex domain.

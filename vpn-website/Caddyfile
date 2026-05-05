@@ -1,0 +1,8 @@
+vpn-go.ru {
+	encode zstd gzip
+	reverse_proxy website:8080
+}
+
+www.vpn-go.ru {
+	redir https://vpn-go.ru{uri} permanent
+}

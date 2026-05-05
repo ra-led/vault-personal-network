@@ -24,11 +24,27 @@ services:
       - CONTROL_PLANE_INTERNAL_TOKEN=${CONTROL_PLANE_INTERNAL_TOKEN:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    ports:
-      - "${WEBSITE_PORT:-8080}:8080"
+    expose:
+      - "8080"
     depends_on:
       - postgres
     restart: unless-stopped
 
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - website
+
 volumes:
   postgres_data:
+  caddy_data:
+  caddy_config:
