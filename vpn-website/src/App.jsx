@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 const STORAGE_PROFILE_KEY = 'vpngo_profile';
 const STORAGE_CUSTOMER_KEY = 'vpngo_customer_id';
@@ -60,10 +60,63 @@ export default function VPNLandingPage() {
   });
   const [isPaying, setIsPaying] = useState(false);
   const [paymentError, setPaymentError] = useState('');
+  const [paymentReturn, setPaymentReturn] = useState(null);
   const [topUpAmount, setTopUpAmount] = useState('300');
 
   const customerId = useMemo(() => createCustomerId(), []);
   const balanceDays = Math.floor(486 / DAILY_PRICE_RUB);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const orderId = params.get('order_id');
+    if (window.location.pathname !== '/payment-return' || !orderId) {
+      return;
+    }
+
+    let cancelled = false;
+    setPaymentReturn({ state: 'checking', message: 'Проверяем статус платежа...' });
+
+    fetch(`/api/payment-status-by-order/${encodeURIComponent(orderId)}`)
+      .then(async (response) => {
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload?.error || 'Не удалось проверить платеж');
+        }
+        return payload;
+      })
+      .then((payload) => {
+        if (cancelled) {
+          return;
+        }
+        if (payload.paid || payload.status === 'succeeded') {
+          setPaymentReturn({
+            state: 'success',
+            message: 'Платеж прошел. Баланс будет обновлен в личном кабинете.'
+          });
+          return;
+        }
+        if (payload.status === 'canceled') {
+          setPaymentReturn({ state: 'error', message: 'Платеж отменен.' });
+          return;
+        }
+        setPaymentReturn({
+          state: 'pending',
+          message: 'Платеж еще обрабатывается. Обновите страницу через несколько секунд.'
+        });
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setPaymentReturn({
+            state: 'error',
+            message: error instanceof Error ? error.message : 'Не удалось проверить платеж'
+          });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function openAuth(mode) {
     setPaymentError('');
@@ -156,6 +209,20 @@ export default function VPNLandingPage() {
 
         <main id="cabinet" className="mx-auto grid max-w-7xl gap-6 px-6 py-8 lg:grid-cols-[0.72fr_1.28fr]">
           <section className="space-y-6">
+            {paymentReturn && (
+              <div
+                className={`rounded-lg border p-4 text-sm font-semibold ${
+                  paymentReturn.state === 'success'
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                    : paymentReturn.state === 'error'
+                      ? 'border-red-200 bg-red-50 text-red-700'
+                      : 'border-amber-200 bg-amber-50 text-amber-800'
+                }`}
+              >
+                {paymentReturn.message}
+              </div>
+            )}
+
             <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
               <div className="text-sm text-slate-500">Баланс</div>
               <div className="mt-2 text-5xl font-black tracking-tight">486 ₽</div>

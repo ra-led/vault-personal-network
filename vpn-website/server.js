@@ -580,6 +580,54 @@ app.get('/api/payment-status/:paymentId', async (req, res) => {
   }
 });
 
+app.get('/api/payment-status-by-order/:orderId', async (req, res) => {
+  if (!requireYookassaConfig(res)) {
+    return;
+  }
+
+  const orderId = req.params.orderId;
+
+  try {
+    const localPayment = await getPaymentByOrderId(orderId);
+    if (!localPayment?.yookassa_payment_id) {
+      return res.status(404).json({ error: 'Payment order was not found' });
+    }
+
+    const remotePayment = await yookassaApiRequest({
+      method: 'GET',
+      apiPath: `/v3/payments/${encodeURIComponent(localPayment.yookassa_payment_id)}`
+    });
+
+    if (!remotePayment.ok || !remotePayment.payload?.id) {
+      return res.status(remotePayment.status || 502).json({
+        error: 'Failed to get YooKassa payment status',
+        local: mapPaymentRow(localPayment)
+      });
+    }
+
+    const synced = await savePaymentRecord({
+      payment: remotePayment.payload,
+      userId: remotePayment.payload.metadata?.user_id ? String(remotePayment.payload.metadata.user_id) : null,
+      orderId: remotePayment.payload.metadata?.order_id ? String(remotePayment.payload.metadata.order_id) : null,
+      planName: remotePayment.payload.metadata?.plan_name ? String(remotePayment.payload.metadata.plan_name) : null,
+      description: remotePayment.payload.description || null,
+      idempotenceKey: null
+    });
+    await syncSucceededPaymentToControlPlane(remotePayment.payload);
+
+    return res.json({
+      payment_id: remotePayment.payload.id,
+      status: remotePayment.payload.status,
+      paid: remotePayment.payload.paid,
+      metadata: remotePayment.payload.metadata,
+      local: mapPaymentRow(synced)
+    });
+  } catch (error) {
+    console.error('payment-status-by-order failed', { message: error instanceof Error ? error.message : String(error) });
+    return res.status(500).json({ error: 'Unexpected error during payment status check' });
+  }
+});
+
 app.get('/api/health', async (_req, res) => {
   try {
     await pool.query('SELECT 1');
