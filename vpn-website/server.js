@@ -9,8 +9,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.PORT || 8080);
-const SHOP_ID = process.env.YOOKASSA_SHOP_ID;
-const SECRET_KEY = process.env.YOOKASSA_SECRET_KEY;
+const SHOP_ID = process.env.YOOKASSA_SHOP_ID || process.env.YOUKASSA_SHOP_ID;
+const SECRET_KEY = process.env.YOOKASSA_SECRET_KEY || process.env.YOUKASSA_API_KEY;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const TRUST_PROXY = process.env.TRUST_PROXY || '1';

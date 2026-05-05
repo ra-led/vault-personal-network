@@ -37,6 +37,7 @@ Required env vars:
 
 - `YOOKASSA_SHOP_ID`
 - `YOOKASSA_SECRET_KEY`
+- `YOUKASSA_SHOP_ID` and `YOUKASSA_API_KEY` are also accepted as aliases.
 - `BASE_URL` (for return URL)
 - `DATABASE_URL` (PostgreSQL)
 - `CONTROL_PLANE_API_URL` (control-plane API reachable from the website container)
